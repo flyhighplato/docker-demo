@@ -1,0 +1,172 @@
+{
+  "AWSTemplateFormatVersion" : "2010-09-09",
+  "Parameters" : {
+    "ECSCluster": {
+      "Description": "The ECS cluster to deploy into",
+      "Type": "String",
+      "Default": ""
+    },
+    "JarImage": {
+      "Description": "The JAR container image",
+      "Type": "String",
+      "Default": ""
+    },
+    "NginxImage": {
+      "Description": "The Nginx container image",
+      "Type": "String",
+      "Default": ""
+    },
+    "VpcID": {
+      "Type": "AWS::EC2::VPC::Id",
+      "Description": "Existing VPC"
+    },
+    "ElbSubnetID": {
+      "Type": "List<AWS::EC2::Subnet::Id>",
+      "Description": "List of existing subnet IDs to use for the load balancer"
+    }
+  },
+  "Resources" : {
+    "Task": {
+      "Type": "AWS::ECS::TaskDefinition",
+      "Properties" : {
+        "ContainerDefinitions" : [
+          {
+            "Name": "jar",
+            "Cpu": "200",
+            "Essential": "true",
+            "Image":{ "Ref": "JarImage" },
+            "Memory":"500"
+          },
+          {
+            "Name": "nginx",
+            "Cpu": "200",
+            "Essential": "true",
+            "Image":{ "Ref": "NginxImage" },
+            "Memory":"500",
+            "PortMappings": [
+              { "HostPort": 80, "ContainerPort": 80 }
+            ],
+            "Links": [ "jar:server" ]
+          }
+        ]
+      }
+    },
+    "Service": {
+      "Type": "AWS::ECS::Service",
+      "Properties" : {
+        "Cluster": { "Ref": "ECSCluster" },
+        "DesiredCount": "1",
+        "LoadBalancers": [
+          {
+            "ContainerName": "nginx",
+            "ContainerPort": "80",
+            "LoadBalancerName" : { "Ref" : "LoadBalancer" }
+          }
+        ],
+        "Role" : { "Ref":"ECSServiceRole" },
+        "TaskDefinition" : {"Ref": "Task"}
+      }
+    },
+    "ECSServiceRole": {
+      "Type": "AWS::IAM::Role",
+      "Properties": {
+        "AssumeRolePolicyDocument": {
+          "Statement": [
+            {
+              "Effect": "Allow",
+              "Principal": {
+                "Service": [
+                  "ecs.amazonaws.com"
+                ]
+              },
+              "Action": [
+                "sts:AssumeRole"
+              ]
+            }
+          ]
+        },
+        "Path": "/",
+        "Policies": [
+          {
+            "PolicyName": "ecs-service",
+            "PolicyDocument": {
+              "Statement": [
+                {
+                  "Effect": "Allow",
+                  "Action": [
+                    "elasticloadbalancing:Describe*",
+                    "elasticloadbalancing:DeregisterInstancesFromLoadBalancer",
+                    "elasticloadbalancing:RegisterInstancesWithLoadBalancer",
+                    "ec2:Describe*",
+                    "ec2:AuthorizeSecurityGroupIngress"
+                  ],
+                  "Resource": "*"
+                }
+              ]
+            }
+          }
+        ]
+      }
+    },
+    "LoadBalancer": {
+      "Type": "AWS::ElasticLoadBalancing::LoadBalancer",
+      "Properties": {
+        "Scheme": "internal",
+        "SecurityGroups": [
+          {
+            "Ref": "ElbSecurityGroup"
+          }
+        ],
+        "Subnets": { "Ref": "ElbSubnetID"},
+        "LBCookieStickinessPolicy": [
+          {
+            "PolicyName": "LBCookieStickinessPolicy",
+            "CookieExpirationPeriod": 86400
+          }
+        ],
+        "Listeners": [
+          {
+            "LoadBalancerPort": 80,
+            "InstancePort": 80,
+            "Protocol": "HTTP"
+          }
+        ],
+        "HealthCheck": {
+          "Target": "HTTP:80/",
+          "HealthyThreshold": 2,
+          "UnhealthyThreshold": 5,
+          "Interval": 10,
+          "Timeout": 5
+        },
+        "CrossZone": true
+      }
+    },
+    "ElbSecurityGroup" : {
+      "Type" : "AWS::EC2::SecurityGroup",
+      "Properties" : {
+        "GroupDescription" : "Allow connections from specified CIDR ranges",
+        "SecurityGroupIngress" : [
+          {
+            "IpProtocol" : "tcp",
+            "FromPort" : "80",
+            "ToPort" : "80",
+            "CidrIp" : "0.0.0.0/0"
+          }
+        ],
+        "VpcId": { "Ref": "VpcID" }
+      }
+    }
+  },
+
+  "Outputs" : {
+    "elb" : {
+      "Value" : { "Ref" : "LoadBalancer" }
+    },
+    "service" : {
+      "Value" : { "Ref" : "Service" }
+    },
+    "task" : {
+      "Value" : { "Ref" : "Task" }
+    }
+  }
+}

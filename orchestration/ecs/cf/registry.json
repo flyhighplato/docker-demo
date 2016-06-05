@@ -1,0 +1,46 @@
+{
+  "AWSTemplateFormatVersion" : "2010-09-09",
+  "Parameters" : {
+    "RepoName" : {
+      "Description" : "Name of container repository",
+      "Type" : "String",
+      "Default" : "docker-demo/jar"
+    }
+  },
+  "Resources" : {
+    "Repo": {
+      "Type": "AWS::ECR::Repository",
+      "Properties": {
+        "RepositoryName" : { "Ref": "RepoName" },
+        "RepositoryPolicyText" : {
+          "Version": "2008-10-17",
+          "Statement": [
+            {
+              "Sid": "AllowAllPushPull",
+              "Effect": "Allow",
+              "Principal": {
+                "AWS": [
+                  "*"
+                ]
+              },
+              "Action": [
+                "ecr:GetDownloadUrlForLayer",
+                "ecr:BatchGetImage",
+                "ecr:BatchCheckLayerAvailability",
+                "ecr:PutImage",
+                "ecr:InitiateLayerUpload",
+                "ecr:UploadLayerPart",
+                "ecr:CompleteLayerUpload"
+              ]
+            }
+          ]
+        }
+      }
+    }
+  },
+  "Outputs" : {
+    "repo" : {
+      "Value" : { "Ref" : "Repo" }
+    }
+  }
+}
