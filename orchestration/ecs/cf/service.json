@@ -32,7 +32,7 @@
         "ContainerDefinitions" : [
           {
             "Name": "jar",
-            "Cpu": "200",
+            "Cpu": "100",
             "Essential": "true",
             "Image":{ "Ref": "JarImage" },
             "Memory":"500"
@@ -42,7 +42,7 @@
             "Cpu": "200",
             "Essential": "true",
             "Image":{ "Ref": "NginxImage" },
-            "Memory":"500",
+            "Memory":"100",
             "PortMappings": [
               { "HostPort": 80, "ContainerPort": 80 }
             ],

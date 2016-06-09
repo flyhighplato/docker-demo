@@ -1,0 +1,23 @@
+{
+  "containerDefinitions": [
+    {
+      "name": "jar",
+      "cpu": 100,
+      "essential": true,
+      "image":"903480711441.dkr.ecr.us-west-2.amazonaws.com/docker-demo/jar",
+      "memory":500
+    },
+    {
+      "name": "nginx",
+      "cpu": 200,
+      "essential": true,
+      "image":"903480711441.dkr.ecr.us-west-2.amazonaws.com/docker-demo/nginx",
+      "memory":100,
+      "portMappings": [
+        { "hostPort": 80, "containerPort": 80 }
+      ],
+      "links": [ "jar:server" ]
+    }
+  ],
+  "family": "dev-gary-docker-demo-service-Task-1EPV89UPB8Z86"
+}
